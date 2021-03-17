@@ -7,9 +7,9 @@ create table warehouse1(
     w_state char(2),
     w_zip char(9),
     w_tax decimal(4,2),
-    w_ytd decimal(12,2) 
-    primary key w_id
-) ;
+    w_ytd decimal(12,2), 
+    primary key (w_id)
+);
 
 select create_sharding_key('key-tpcc', 'w_id');
 select assign_key_range_2_shard('shard1', 'key-tpcc', 0, 3);

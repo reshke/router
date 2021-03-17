@@ -296,8 +296,8 @@ _tpcc_config() {
     #=================================================================================================================================================
 
     if [ -z $ROUTER_ONLY ]; then
-        $BINDIR/psql -h $PGSHARDHST1 -p $PGSHARDPORT1 -d $PGSHARDDB1 -U $PGSHARDUSR1 -f ./cool-sql/prepare-shard.sql    
-        $BINDIR/psql -h $PGSHARDHST2 -p $PGSHARDPORT2 -d $PGSHARDDB2 -U $PGSHARDUSR2 -f ./cool-sql/prepare-shard.sql
+        $BINDIR/psql -h $PGSHARDHST1 -p $PGSHARDPORT1 -d $PGSHARDDB1 -U $PGSHARDUSR1 -f ./tpcc-sql/prepare-shard.sql    
+        $BINDIR/psql -h $PGSHARDHST2 -p $PGSHARDPORT2 -d $PGSHARDDB2 -U $PGSHARDUSR2 -f ./tpcc-sql/prepare-shard.sql
     fi
 
     #=================================================================================================================================================
@@ -311,7 +311,7 @@ _tpcc_config() {
 
         $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -c "select mdbr_add_shard('shard1', '$PGSHARDHST1', '$PGSHARDPORT1', '$PGSHARDDB1', '$PGSHARDUSR1');"
         $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -c "select mdbr_add_shard('shard2', '$PGSHARDHST2', '$PGSHARDPORT2', '$PGSHARDDB2', '$PGSHARDUSR2');"
-        $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -f ./cool-sql/router-fdw.sql
+        $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -f ./tpcc-sql/router.sql
     else
         BOUNCER_HOST=localhost
         BOUNCER_PORT=6432
@@ -319,10 +319,10 @@ _tpcc_config() {
         $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -c "select mdbr_add_shard('shard1', '$BOUNCER_HOST', '$BOUNCER_PORT', '$PGSHARDDB1', '$PGSHARDUSR1');"
         $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -c "select mdbr_add_shard('shard2', '$BOUNCER_HOST', '$BOUNCER_PORT', '$PGSHARDDB2', '$PGSHARDUSR2');"
 
-        $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -f ./cool-sql/router-fdw.sql
+        $BINDIR/psql -h $MDBROUTERHST -p $MDBROUTERPORT -d $MDBROUTERDB -U $MDBROUTEUSR -f ./tpcc-sql/router.sql
     fi
 
-    sed -i "s|#session_preload_libraries = ''|session_preload_libraries = '/home/reshke/code/mdb-router/mdb_router.so'|g" $TMPDIR/mdb-router/postgresql.conf
+    sed -i "s|#session_preload_libraries = ''|session_preload_libraries = '/home/reshke/code/router/router.so'|g" $TMPDIR/mdb-router/postgresql.conf
     $BINDIR/pg_ctl -D $TMPDIR/mdb-router -l $TMPDIR/mdb-router/pg_log.log -o "-p $MDBROUTERPORT -c max_connections=1000" reload
     $BINDIR/pg_ctl -D $TMPDIR/shard1 -l $TMPDIR/shard1/pg_log.log -o "-p $PGSHARDPORT1 -c max_connections=1000" reload
     $BINDIR/pg_ctl -D $TMPDIR/shard2 -l $TMPDIR/shard2/pg_log.log -o "-p $PGSHARDPORT2 -c max_connections=1000" reload

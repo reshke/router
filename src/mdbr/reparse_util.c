@@ -330,22 +330,22 @@ static void mdbr_reparse_funcexpr(FuncExpr *fe, mdbr_search_entry **sel,
 	}
 }
 
-static void mdbr_reparse_te(TargetEntry *te, mdbr_search_entry **sel)
-{
+static void 
+mdbr_reparse_te_expr(TargetEntry *te, Expr * expr, mdbr_search_entry **sel) {
 	if (te->resname == NULL) {
 		return;
 	}
-	switch (nodeTag(te->expr)) {
+	switch (nodeTag(expr)) {
 	case T_Const: {
 		mdbr_restrict_info *ri = palloc(sizeof(mdbr_restrict_info));
 		mdbr_restrict_info_init(ri);
 		mdbr_restrict_info_assing_col(ri, te->resname);
-		mdbr_reparse_const(te->expr, &ri->val);
+		mdbr_reparse_const(expr, &ri->val);
 
 		mdbr_se_append_ri(*sel, ri);
 	} break;
 	case T_FuncExpr: {
-		mdbr_reparse_funcexpr(te->expr, sel, te->resname);
+		mdbr_reparse_funcexpr(expr, sel, te->resname);
 	} break;
 	default: {
 		// failed to parse
@@ -361,12 +361,36 @@ void mdbr_reparse_targetEntries(List *targetEntries, mdbr_search_entry **sel)
 	{
 		TargetEntry *te = lfirst(lc);
 
-		mdbr_reparse_te(te, sel);
+		mdbr_reparse_te_expr(te, te->expr, sel);
 	}
 }
 
-void mdbr_reparse_query(Query *q, mdbr_search_entry **sel)
-{
+static inline void
+mdbr_repasre_values_entry(List * values, List * targetList, mdbr_search_entry ** sel) {
+        ListCell * lc;
+        int i = 0;
+        
+        foreach(lc, values) {
+                Expr * e = lfirst(lc);
+                TargetEntry * te = list_nth(targetList, i);
+
+                mdbr_reparse_te_expr(te, e, sel);
+
+                ++i;
+        }
+}
+
+static inline void 
+mdbr_reparse_rtevalues(List * values_lists, List * targetList, mdbr_search_entry ** sel) {
+
+        ListCell * lc;
+        foreach(lc, values_lists) {
+                List * values_list = lfirst(lc);
+                mdbr_repasre_values_entry(values_list, targetList, sel);
+        }
+}
+
+void mdbr_reparse_query(Query *q, mdbr_search_entry **sel) {
 	mdbr_reparse_fromExpr(q->jointree, q->rtable, sel);
 	mdbr_reparse_targetEntries(q->targetList, sel);
 
@@ -378,6 +402,11 @@ void mdbr_reparse_query(Query *q, mdbr_search_entry **sel)
 		if (rte->subquery) {
 			mdbr_reparse_query(rte->subquery, sel);
 		}
+
+                if (rte->rtekind == RTE_VALUES) {
+                        //Assert(q->targetList)
+                        mdbr_reparse_rtevalues(rte->values_lists, q->targetList, sel);
+                }
 	}
 }
 #endif
