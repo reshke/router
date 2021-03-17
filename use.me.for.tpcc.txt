@@ -1,3 +1,0 @@
-./tpcc.lua --pgsql-user=routing_user --pgsql-db=lolkek1 --time=360 --threads=12 --report-interval=1 --tables=1 --scale=5 --use_fk=0 --trx_level=RC --db-driver=pgsql --pgsql-port=6432 --pgsql-host=localhost prepare
-
-/home/reshke/bins/pgsql/bin/pg_dump -U routing_user -d lolkek1 -p 6432 -h localhost --inserts -t public.customer1 -t public.warehouse1 -t public.district1 -t public.history1 -t public.new_orders1 -t public.order_line1 -t public.orders1 -t public.stock1 -t public.item1 --rows-per-insert=1 --data-only > junk/work/sql/router.data

@@ -1,4 +1,4 @@
-# mdb-router
+# router
 Request router for OLTP PostgreSQL sharding
 
 
@@ -28,12 +28,7 @@ Request router for OLTP PostgreSQL sharding
 execute ddl on each shard and then load some data using router
 
 ### WHAT DO WE NEED FOR TPCC
-    JOIN should work fine
-    UPDATE should work fine
-    DELETE maybe should work
     DDL routing?
-    Some fkexibel way to handle all types of routing expr like SELECT * FROM t1 WHERE 8 * sin(i) - i ~ 12
-    we have connections leak problems when use with odyssey 
    
 ### RUN TPCC
     make PG_CONFIG=/home/reshke/bins/pgsql/bin/pg_config CONFIG_OPTS='-t=yes' clean compile-extension cluster-up 
