@@ -1,0 +1,6 @@
+INSERT INTO warehouse1 (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) values(4, 'name-uujox','street1-fmufqsqqdc','street2-czenupqltp', 'city-rwttvrfiap', 'ec', 'zip-28646', 0.111063,300000);
+
+INSERT INTO warehouse1 (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) values(5, 'name-dvaim','street1-qifloqjggy','street2-vqmtfzvufj', 'city-oecyqctxqc', 'mg', 'zip-01200', 0.083601,300000);
+
+
+INSERT INTO district1 (d_id, d_w_id, d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) values(1, 3, 'name-hlxlk','street1-tqetcfrkdd','street2-adnrejuode', 'city-dwtpmyfurm', 'ch', 'zip-58057', 0.090249,30000,3001),(2, 3, 'name-jzgqo','street1-ljfazawsia','street2-gwzvqdjuhu', 'city-ouienigwqp', 'do', 'zip-87942', 0.082615,30000,3001),(3, 3, 'name-pngme','street1-izapgzaecj','street2-ycfftiqdsi', 'city-puskcfzbfi', 'sd', 'zip-73148', 0.166630,30000,3001),(4, 3, 'name-momam','street1-dlhpitqlev','street2-vyjyllyflw', 'city-frefzafodj', 'ga', 'zip-11003', 0.171527,30000,3001),(5, 3, 'name-evqny','street1-jvulkskzam','street2-ytjumnvbnv', 'city-clhjhitfst', 'rd', 'zip-02021', 0.058213,30000,3001),(6, 3, 'name-gakql','street1-ikgiuusthi','street2-rgaufviuqf', 'city-byssqyscpd', 'bz', 'zip-91891', 0.164758,30000,3001);

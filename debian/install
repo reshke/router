@@ -1,0 +1,3 @@
+mdb_router.so /usr/lib/postgresql/13/lib
+mdb_router.control /usr/share/postgresql/13/extension
+mdb_router--0.0.0.sql /usr/share/postgresql/13/extension

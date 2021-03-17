@@ -1,0 +1,14 @@
+# Generated subdirectories
+debian/changelog
+version.properties
+build-dir/
+/log/
+/results/
+/tmp_check/
+build/
+*.o
+*.bc
+*.so
+*.swp
+tmp/
+tmp/*

@@ -1,0 +1,10 @@
+Source: router
+Section: database
+Priority: extra
+Maintainer: reshke <reshke@yandex-team.ru>
+Standards-Version: 3.9.4
+Homepage: https://github.yandex-team.ru/mdb/router_fdw
+
+Package: router
+Architecture: any
+Description: PostgreSQL multishard router. 

@@ -1,0 +1,66 @@
+MDB_ROUTER_BUILD_DIR=build
+MDB_ROUTER_DIR=$(shell pwd)
+
+MDB_ROUTER_POSTGRESQL_SOURCE_DIR=pgcode
+MDB_ROUTER_POSTGRESQL_BIN_DIR=pgbin
+
+MDB_ROUTER_TMP=tmp
+
+PG_CONCURRENCY:=12
+
+PG_CONFIG:=pg_config
+
+SRC_DIR:=src
+
+clean-pgdata:
+	killall -9 postgres || true
+	rm -fr ./$(MDB_ROUTER_BUILD_DIR)/tmp
+	mkdir -p ./$(MDB_ROUTER_BUILD_DIR)/tmp
+
+clean: clean-pgdata
+	rm -f router.so
+	rm -f mdbr.o
+	rm -fr ./$(MDB_ROUTER_BUILD_DIR)
+	make -C $(SRC_DIR)
+
+fmtinit:
+	git submodule init
+	git submodule update
+
+fmt: fmtinit
+	run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-9 ./*.c ./*.h
+
+apply_fmt:
+	find ./ -maxdepth 5 -iname '*.h' -o -iname '*.c' | xargs clang-format-9 -i 
+
+prepare:
+	mkdir -p ./$(MDB_ROUTER_BUILD_DIR)/$(MDB_ROUTER_TMP)
+
+compile-extension:
+	make PG_CONFIG=$(PG_CONFIG) USE_PGXS=1 -j$(PG_CONCURRENCY) && make PG_CONFIG=$(PG_CONFIG) USE_PGXS=1 -j$(PG_CONCURRENCY) install
+
+CONFIG_OPTS:=
+
+cluster-up:
+	BINDIR=$(shell $(PG_CONFIG) --bindir) ./configure.sh $(CONFIG_OPTS)
+
+shards-up:
+
+router-up:
+
+prepare-env: compile-pg compile-extension shards-up router-up
+
+
+PGSOURCEREPO:=
+PGBR:=
+
+TMP_BIN:=$(MDB_ROUTER_DIR)/$(MDB_ROUTER_TMP)
+
+fetch-custom-pg:
+	rm -fr $(TMP_BIN)
+	mkdir -p $(TMP_BIN)
+	git clone $(PGSOURCEREPO) $(TMP_BIN) --single-branch -b $(PGBR)
+
+build-docker-pkg:
+	./scripts/chlog_gen.sh
+	docker build -f ./docker/dpkg/Dockerfile . --tag routerbuild:1.0 && docker run routerbuild:1.0

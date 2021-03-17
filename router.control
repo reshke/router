@@ -1,0 +1,5 @@
+# mdb_router extension
+comment = 'PostgreSQL sharding'
+default_version = '0.0.1'
+module_pathname = '$libdir/router'
+relocatable = true

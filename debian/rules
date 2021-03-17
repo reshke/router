@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# NOTE: Only TABs allowed here !!!
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/router
+
+%:
+	dh $@
