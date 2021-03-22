@@ -330,8 +330,9 @@ static void mdbr_reparse_funcexpr(FuncExpr *fe, mdbr_search_entry **sel,
 	}
 }
 
-static void 
-mdbr_reparse_te_expr(TargetEntry *te, Expr * expr, mdbr_search_entry **sel) {
+static void mdbr_reparse_te_expr(TargetEntry *te, Expr *expr,
+				 mdbr_search_entry **sel)
+{
 	if (te->resname == NULL) {
 		return;
 	}
@@ -365,32 +366,36 @@ void mdbr_reparse_targetEntries(List *targetEntries, mdbr_search_entry **sel)
 	}
 }
 
-static inline void
-mdbr_repasre_values_entry(List * values, List * targetList, mdbr_search_entry ** sel) {
-        ListCell * lc;
-        int i = 0;
-        
-        foreach(lc, values) {
-                Expr * e = lfirst(lc);
-                TargetEntry * te = list_nth(targetList, i);
+static inline void mdbr_repasre_values_entry(List *values, List *targetList,
+					     mdbr_search_entry **sel)
+{
+	ListCell *lc;
+	int i = 0;
 
-                mdbr_reparse_te_expr(te, e, sel);
+	foreach(lc, values)
+	{
+		Expr *e = lfirst(lc);
+		TargetEntry *te = list_nth(targetList, i);
 
-                ++i;
-        }
+		mdbr_reparse_te_expr(te, e, sel);
+
+		++i;
+	}
 }
 
-static inline void 
-mdbr_reparse_rtevalues(List * values_lists, List * targetList, mdbr_search_entry ** sel) {
-
-        ListCell * lc;
-        foreach(lc, values_lists) {
-                List * values_list = lfirst(lc);
-                mdbr_repasre_values_entry(values_list, targetList, sel);
-        }
+static inline void mdbr_reparse_rtevalues(List *values_lists, List *targetList,
+					  mdbr_search_entry **sel)
+{
+	ListCell *lc;
+	foreach(lc, values_lists)
+	{
+		List *values_list = lfirst(lc);
+		mdbr_repasre_values_entry(values_list, targetList, sel);
+	}
 }
 
-void mdbr_reparse_query(Query *q, mdbr_search_entry **sel) {
+void mdbr_reparse_query(Query *q, mdbr_search_entry **sel)
+{
 	mdbr_reparse_fromExpr(q->jointree, q->rtable, sel);
 	mdbr_reparse_targetEntries(q->targetList, sel);
 
@@ -403,10 +408,11 @@ void mdbr_reparse_query(Query *q, mdbr_search_entry **sel) {
 			mdbr_reparse_query(rte->subquery, sel);
 		}
 
-                if (rte->rtekind == RTE_VALUES) {
-                        //Assert(q->targetList)
-                        mdbr_reparse_rtevalues(rte->values_lists, q->targetList, sel);
-                }
+		if (rte->rtekind == RTE_VALUES) {
+			//Assert(q->targetList)
+			mdbr_reparse_rtevalues(rte->values_lists, q->targetList,
+					       sel);
+		}
 	}
 }
 #endif

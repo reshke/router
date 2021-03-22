@@ -342,7 +342,9 @@ typedef struct mdbr_scan_state {
 	HeapTuple *tuples;
 	int data_iter;
 	int numrows;
+	int numproceded;
 	bool once;
+	EState **es;
 
 	int parsed_shard;
 } mdbr_scan_state_t;
@@ -556,8 +558,9 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 	case XACT_EVENT_COMMIT:
 	case XACT_EVENT_PARALLEL_COMMIT: {
 		if (!global->in_transaction) {
-			elog(DEBUG1, "do nothing while abort transaction as no qryes proccessed yet");
-                        break;
+			elog(DEBUG1,
+			     "do nothing while abort transaction as no qryes proccessed yet");
+			break;
 		}
 		//
 		// failed or not, we would not be in transaction anymore
@@ -574,9 +577,10 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 	case XACT_EVENT_ABORT:
 	case XACT_EVENT_PARALLEL_ABORT: {
 		if (!global->in_transaction) {
-                        Assert(global->conn == NULL);
-			elog(DEBUG1, "do nothing while abort transaction as no qryes proccessed yet");
-                        break;
+			Assert(global->conn == NULL);
+			elog(DEBUG1,
+			     "do nothing while abort transaction as no qryes proccessed yet");
+			break;
 		}
 
 		global->in_transaction = false;
@@ -597,6 +601,7 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 {
 	MemoryContext oldcontext = CurrentMemoryContext;
+	node->es = &estate;
 
 	/*  
                  *      isTopLevel: passed down from ProcessUtility to determine whether we are
@@ -905,6 +910,8 @@ TupleTableSlot *mdbr_exec(mdbr_scan_state_t *node)
 
 		// here we connect to shard
 		fetch_scan_tuples_buff(node);
+		// TODO XXX FIXME
+		(*node->es)->es_processed = 1;
 	}
 
 	if (node->data_iter == node->numrows) {
@@ -1014,7 +1021,7 @@ PlannerInfo *subqry_planner(PlannerGlobal *glob, Query *parse,
 	root->inhTargetKind = INHKIND_NONE;
 	root->hasPseudoConstantQuals = false;
 #if PG_VERSION_NUM >= 140000
-        root->hasAlternativeSubPlans = false;
+	root->hasAlternativeSubPlans = false;
 #endif
 	root->hasRecursion = hasRecursion;
 	if (hasRecursion)
@@ -1570,6 +1577,14 @@ static PlannedStmt *shard_query_pushdown_planner(Query *parse,
 
 	PlannedStmt *result =
 		pplanner(parse, query_string, cursorOptions, boundParams);
+
+	switch (result->commandType) {
+	case CMD_INSERT:
+	case CMD_UPDATE:
+	case CMD_DELETE: {
+		result->planTree->plan_rows = 1;
+	} break;
+	}
 
 	return result;
 }

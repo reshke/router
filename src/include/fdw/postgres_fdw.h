@@ -40,5 +40,4 @@ PGresult *pgfdw_exec_query(PGconn *conn, const char *query);
 void pgfdw_report_error(int elevel, PGresult *res, PGconn *conn, bool clear,
 			const char *sql);
 
-
 #endif /* POSTGRES_FDW_H */

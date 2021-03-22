@@ -1,3 +1,4 @@
+DROP TABLE warehouse1;
 create table warehouse1(
     w_id smallint not null,
     w_name varchar(10),
@@ -6,7 +7,7 @@ create table warehouse1(
     w_city varchar(20),
     w_state char(2),
     w_zip char(9),
-    w_tax decimal(4,2),
+    w_tax decimal(10,2),
     w_ytd decimal(12,2), 
     primary key (w_id)
 );
@@ -15,7 +16,7 @@ select create_sharding_key('key-tpcc', 'w_id');
 select assign_key_range_2_shard('shard1', 'key-tpcc', 0, 3);
 select assign_key_range_2_shard('shard2', 'key-tpcc', 3, 10);
 
-
+DROP TABLE district1;
 create table district1 (
 	d_id smallint not null, 
 	d_w_id smallint not null, 
@@ -25,7 +26,7 @@ create table district1 (
 	d_city varchar(20), 
 	d_state char(2), 
 	d_zip char(9), 
-	d_tax decimal(4,2), 
+	d_tax decimal(10,2), 
 	d_ytd decimal(12,2), 
 	d_next_o_id int,
     primary key (d_id, d_w_id)
@@ -35,7 +36,8 @@ select create_sharding_key('key-tpcc2', 'd_w_id');
 select assign_key_range_2_shard('shard1', 'key-tpcc2', 0, 3);
 select assign_key_range_2_shard('shard2', 'key-tpcc2', 3, 10);
 
-CREATE  TABLE public.customer1 (
+DROP TABLE customer1;
+CREATE TABLE customer1 (
     c_id integer NOT NULL,
     c_d_id smallint NOT NULL,
     c_w_id smallint NOT NULL,
@@ -51,7 +53,7 @@ CREATE  TABLE public.customer1 (
     c_since timestamp without time zone,
     c_credit character(2),
     c_credit_lim bigint,
-    c_discount numeric(4,2),
+    c_discount numeric(10,2),
     c_balance numeric(12,2),
     c_ytd_payment numeric(12,2),
     c_payment_cnt smallint,
@@ -63,15 +65,15 @@ select create_sharding_key('key-tpcc3', 'c_w_id');
 select assign_key_range_2_shard('shard1', 'key-tpcc3', 0, 3);
 select assign_key_range_2_shard('shard2', 'key-tpcc3', 3, 10);
 
-
-create  table IF NOT EXISTS history1 (
+DROP TABLE history1;
+create table IF NOT EXISTS history1 (
 	h_c_id int,
 	h_c_d_id smallint,
 	h_c_w_id smallint,
 	h_d_id smallint,
 	h_w_id smallint,
 	h_date timestamp,
-	h_amount decimal(6,2),
+	h_amount decimal(10,10),
 	h_data varchar(24)
 ) ;
 
@@ -116,7 +118,7 @@ create  table IF NOT EXISTS order_line1 (
 	ol_supply_w_id smallint,
 	ol_delivery_d timestamp,
 	ol_quantity smallint,
-	ol_amount decimal(6,2),
+	ol_amount decimal(10,2),
 	ol_dist_info char(24),
 	PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number)
 ) ;
@@ -139,7 +141,7 @@ create  table IF NOT EXISTS stock1 (
 	s_dist_08 char(24),
 	s_dist_09 char(24),
 	s_dist_10 char(24),
-	s_ytd decimal(8,0),
+	s_ytd decimal(10,2),
 	s_order_cnt smallint,
 	s_remote_cnt smallint,
 	s_data varchar(50),
@@ -154,7 +156,7 @@ create table IF NOT EXISTS item1 (
       i_id int not null,
       i_im_id int,
       i_name varchar(24),
-      i_price decimal(5,2),
+      i_price decimal(10,2),
       i_data varchar(50),
     PRIMARY KEY(i_id)
 ) ;

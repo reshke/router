@@ -134,8 +134,8 @@ MDB_ROUTER_API Datum mdbr_add_shard(PG_FUNCTION_ARGS)
 	strcpy(sh->keywords[n], "user");
 	strcpy(sh->values[n], usr);
 	n++;
-	
-        strcpy(sh->keywords[n], "password");
+
+	strcpy(sh->keywords[n], "password");
 	strcpy(sh->values[n], passwd);
 	n++;
 
