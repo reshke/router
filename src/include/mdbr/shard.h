@@ -21,7 +21,7 @@ typedef int mdbr_shard_id_t;
 #define MAX_SHARD_CONNPARAMS 12
 
 // TODO:// VLA
-#define MAX_SHARDS 4
+#define MAX_SHARDS 32
 
 // TODO: dynamic shmem access/allocation
 typedef struct {

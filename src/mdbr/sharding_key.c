@@ -95,7 +95,7 @@ static mdbr_shkey *llist_search(mdbr_shkeys_list *l, char *name, bool *found)
 	*found = false;
 
 	if (l == NULL) {
-		return;
+		return NULL;
 	}
 
 	for (size_t i = 0; i < l->sz; ++i) {
@@ -190,8 +190,6 @@ mdbr_oid_t mdbr_shkey_route_shard(mdbr_shkey *shkey, mdbr_search_entry *se)
 mdbr_oid_t mdbr_route_by_se(List *sel /* a list of mdbr search entries */,
 			    bool *success)
 {
-	mdbr_init();
-
 	ListCell *lc;
 	*success = false;
 	mdbr_oid_t ret = UNROUTED;
@@ -228,8 +226,7 @@ mdbr_oid_t mdbr_route_by_se(List *sel /* a list of mdbr search entries */,
 	return ret;
 }
 
-mdbr_retcode_t mdbr_shkeys_list_add(mdbr_shkey *sh)
-{
+mdbr_retcode_t mdbr_shkeys_list_add(mdbr_shkey *sh) {
 	if (l->sz >= MAX_SHKEY_L_SZ) {
 		elog(ERROR, "too many sharing keys");
 	}
@@ -245,13 +242,12 @@ mdbr_retcode_t mdbr_shkeys_list_add(mdbr_shkey *sh)
 
 PG_FUNCTION_INFO_V1(create_sharding_key);
 // TODO:: map shkey name into oid and raise error on shkey creation when shkey name in already usd
-MDB_ROUTER_API Datum create_sharding_key(PG_FUNCTION_ARGS)
-{
+MDB_ROUTER_API Datum create_sharding_key(PG_FUNCTION_ARGS) {
 	// as this func is not called in the fdw context
-	mdbr_oids_init();
-	mdbr_shkeys_init();
 	// -----------------------------------------------------------------
-	char *name = text_to_cstring(PG_GETARG_TEXT_PP(0));
+        mdbr_init();
+	
+        char *name = text_to_cstring(PG_GETARG_TEXT_PP(0));
 #ifdef SHKEY_USE_ARRAY_TYPE
 	// not working for now
 	ArrayType *shkey_args = PG_GETARG_ARRAYTYPE_P(1);
@@ -353,10 +349,9 @@ MDB_ROUTER_API Datum create_sharding_key(PG_FUNCTION_ARGS)
 
 PG_FUNCTION_INFO_V1(show_shkey);
 
-MDB_ROUTER_API Datum show_shkey(PG_FUNCTION_ARGS)
-{
-	mdbr_oids_init();
-	mdbr_shkeys_init();
+MDB_ROUTER_API Datum show_shkey(PG_FUNCTION_ARGS) {
+        mdbr_init();
+
 	char *shkey_name = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
 	bool found;
@@ -381,13 +376,10 @@ int assign_key_range_2_shard_impl(mdbr_shard *sh, mdbr_key_range *kr)
 }
 
 PG_FUNCTION_INFO_V1(assign_key_range_2_shard);
-MDB_ROUTER_API Datum assign_key_range_2_shard(PG_FUNCTION_ARGS)
-{
-	/**/
-	mdbr_oids_init();
-	mdbr_shkeys_init();
-	mdbr_kr_init();
+MDB_ROUTER_API Datum assign_key_range_2_shard(PG_FUNCTION_ARGS) {
+        mdbr_init();
 
+	/**/
 	char *shard_name = text_to_cstring(PG_GETARG_TEXT_PP(0));
 	char *shkey_name = text_to_cstring(PG_GETARG_TEXT_PP(1));
 #ifdef SHKEY_USE_ARRAY_TYPE

@@ -17,7 +17,6 @@ static mdbr_shards_list *l = NULL;
 
 MDBR_INIT_F void mdbr_shards_init()
 {
-	mdbr_oids_init();
 	bool found;
 	l = ShmemInitStruct(MDBR_SHARD_L_NAMESPACE, sizeof(mdbr_shard), &found);
 
@@ -30,7 +29,6 @@ MDBR_INIT_F void mdbr_shards_init()
 
 mdbr_retcode_t mdbr_shard_alloc(mdbr_shard **sh)
 {
-	mdbr_shards_init();
 	if (l->sz >= MAX_SHARDS) {
 		elog(ERROR, "too many shars, limit %d reached", MAX_SHARDS);
 	}
@@ -58,8 +56,6 @@ void mdbr_shard_free(mdbr_shard *sh)
 
 mdbr_shard *mdbr_shard_get_byoid(mdbr_oid_t oid)
 {
-	mdbr_shards_init();
-
 	mdbr_shard *sh;
 
 	char prefix[sizeof(MDBR_SHARDS_NAMESPACE) + MAX_OID_LEN];
@@ -78,7 +74,6 @@ mdbr_shard *mdbr_shard_get_byoid(mdbr_oid_t oid)
 
 mdbr_shard *mdbr_shard_get_byname(char *name)
 {
-	mdbr_shards_init();
 	for (size_t i = 0; i < l->sz; ++i) {
 		mdbr_shard *sh = mdbr_shard_get_byoid(l->sh_oids[i]);
 		if (strcmp(sh->name, name) == 0) {

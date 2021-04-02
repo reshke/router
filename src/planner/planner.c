@@ -344,7 +344,7 @@ typedef struct mdbr_scan_state {
 	int numrows;
 	int numproceded;
 	bool once;
-	EState **es;
+	EState *es;
 
 	int parsed_shard;
 } mdbr_scan_state_t;
@@ -384,7 +384,7 @@ static inline Oid oid_from_te(TargetEntry *te)
 	} break;
 	}
 
-	return;
+	return oid;
 }
 
 static inline int get_tts_attindx_from_var(Var *v, List *rtel,
@@ -600,14 +600,14 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 
 void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 {
+	node->es = estate;
 	MemoryContext oldcontext = CurrentMemoryContext;
-	node->es = &estate;
+       // estate->es_processed = 1;
 
 	/*  
                  *      isTopLevel: passed down from ProcessUtility to determine whether we are
          *      inside a function.
          */
-
 	TupleDesc slot = CreateTemplateTupleDesc(
 		get_ll_non_junk_len(node->parse->targetList));
 
@@ -911,7 +911,13 @@ TupleTableSlot *mdbr_exec(mdbr_scan_state_t *node)
 		// here we connect to shard
 		fetch_scan_tuples_buff(node);
 		// TODO XXX FIXME
-		(*node->es)->es_processed = 1;
+		switch (node->parse->commandType) {
+		case CMD_INSERT:
+		case CMD_UPDATE:
+		case CMD_DELETE: {
+			node->es->es_processed = 1;
+		} break;
+		}
 	}
 
 	if (node->data_iter == node->numrows) {
@@ -1574,11 +1580,10 @@ static PlannedStmt *shard_query_pushdown_planner(Query *parse,
 	// XXX : dirty hack, TODO FIXME
 	eject_not_matter(parse);
 	// ====================================================
-
 	PlannedStmt *result =
 		pplanner(parse, query_string, cursorOptions, boundParams);
 
-	switch (result->commandType) {
+        switch (result->commandType) {
 	case CMD_INSERT:
 	case CMD_UPDATE:
 	case CMD_DELETE: {

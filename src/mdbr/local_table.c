@@ -19,10 +19,7 @@ static void mdbr_ltables_init()
 	}
 }
 
-bool is_local_table(char *n)
-{
-	mdbr_ltables_init();
-
+bool is_local_table(char *n) {
 	for (size_t i = 0; i < l->sz; ++i) {
 		if (strcmp(n, l->ltables[i]) == 0) {
 			return true;
