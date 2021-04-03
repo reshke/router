@@ -38,11 +38,13 @@ void mdbr_meta_init()
 	/************************************************/
 }
 
-void mdbr_meta_free(mdbr_meta *m) {
+void mdbr_meta_free(mdbr_meta *m)
+{
 	//TODO : impl this somehow
 }
 
-mdbr_meta *mdbr_meta_get() {
+mdbr_meta *mdbr_meta_get()
+{
 	if (meta == NULL) {
 		elog(ERROR, "meta info uninitialized");
 	}
@@ -59,8 +61,9 @@ mdbr_meta *mdbr_meta_get() {
 PG_FUNCTION_INFO_V1(mdbr_add_shard);
 PG_FUNCTION_INFO_V1(mdbr_reset_meta);
 
-MDB_ROUTER_API Datum mdbr_reset_meta(PG_FUNCTION_ARGS) {
-        mdbr_init();
+MDB_ROUTER_API Datum mdbr_reset_meta(PG_FUNCTION_ARGS)
+{
+	mdbr_init();
 
 	if (meta == NULL) {
 		PG_RETURN_VOID();
@@ -70,8 +73,9 @@ MDB_ROUTER_API Datum mdbr_reset_meta(PG_FUNCTION_ARGS) {
 	PG_RETURN_VOID();
 }
 
-MDB_ROUTER_API Datum mdbr_add_shard(PG_FUNCTION_ARGS) {
-        mdbr_init();
+MDB_ROUTER_API Datum mdbr_add_shard(PG_FUNCTION_ARGS)
+{
+	mdbr_init();
 
 	int argptr = 0;
 	char *name = text_to_cstring(PG_GETARG_TEXT_PP(argptr++));
@@ -154,8 +158,8 @@ mdbr_retcode_t mdbr_init()
 {
 	mdbr_oids_init();
 	mdbr_shkeys_init();
-        mdbr_kr_init();
-        mdbr_ltables_init();
-        mdbr_shards_init();
+	mdbr_kr_init();
+	mdbr_ltables_init();
+	mdbr_shards_init();
 	mdbr_meta_init();
 }

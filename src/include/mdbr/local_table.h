@@ -11,5 +11,6 @@ typedef struct {
 
 extern MDB_ROUTER_API Datum add_local_table(PG_FUNCTION_ARGS);
 extern bool is_local_table(char *n);
+extern void mdbr_ltables_init();
 
 #endif /* MDBR_LOCAl_TABLE */

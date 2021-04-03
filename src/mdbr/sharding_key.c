@@ -13,6 +13,14 @@ static mdbr_shkeys_list *l = NULL;
 static HTAB *shkey_names_hashtable = NULL;
 #define MDBR_SHKEYS_HTAB_NAME "MDBR_SHKEYS_HTAB_NAME"
 
+static HTAB *shkey_oid_hashtable = NULL;
+#define MDBR_SHKEYS_HTAB_OIDS "MDBR_SHKEYS_HTAB_OIDS"
+
+typedef struct {
+	mdbr_oid_t oid;
+	mdbr_shkey *shkey_ptr;
+} mdbr_shkey_cache_entry;
+
 MDBR_INIT_F mdbr_retcode_t mdbr_shkeys_init()
 {
 	elog(DEBUG2, "initializing shkeys in shmem");
@@ -23,6 +31,15 @@ MDBR_INIT_F mdbr_retcode_t mdbr_shkeys_init()
 	if (!found) {
 		l->sz = 0;
 	}
+
+	HASHCTL ctl;
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(mdbr_oid_t);
+	ctl.entrysize = sizeof(mdbr_shkey_cache_entry);
+
+	shkey_oid_hashtable =
+		ShmemInitHash(MDBR_SHKEYS_HTAB_OIDS, MAX_SHKEY_L_SZ,
+			      MAX_SHKEY_L_SZ, &ctl, HASH_ELEM | HASH_BLOBS);
 #if 0
         HASHCTL ctl;
 	MemSet(&ctl, 0, sizeof(ctl));
@@ -58,6 +75,15 @@ static mdbr_retcode_t mdbr_shkey_store(mdbr_shkey **shk, mdbr_oid_t *oid)
 
 mdbr_shkey *mdbr_shkey_getbyoid(mdbr_oid_t oid)
 {
+	bool h_found;
+	mdbr_shkey_cache_entry e;
+	e.oid = oid;
+	hash_search(shkey_oid_hashtable, (void *)&e, HASH_FIND, &h_found);
+
+	if (h_found) {
+		return e.shkey_ptr;
+	}
+
 	//                prefix                  + max_oid_len + NULL
 	char prefix[sizeof(MDBR_SHKEY_NAMESPACE) + MAX_OID_LEN];
 	sprintf(prefix, "%s-%d", MDBR_SHKEY_NAMESPACE, oid);
@@ -71,6 +97,10 @@ mdbr_shkey *mdbr_shkey_getbyoid(mdbr_oid_t oid)
 		elog(ERROR, "sharding with oid %d not found", oid);
 		return NULL;
 	}
+
+	e.oid = oid;
+	e.shkey_ptr = shk;
+	hash_search(shkey_oid_hashtable, (void *)&e, HASH_ENTER, &h_found);
 
 	return shk;
 }
@@ -226,7 +256,8 @@ mdbr_oid_t mdbr_route_by_se(List *sel /* a list of mdbr search entries */,
 	return ret;
 }
 
-mdbr_retcode_t mdbr_shkeys_list_add(mdbr_shkey *sh) {
+mdbr_retcode_t mdbr_shkeys_list_add(mdbr_shkey *sh)
+{
 	if (l->sz >= MAX_SHKEY_L_SZ) {
 		elog(ERROR, "too many sharing keys");
 	}
@@ -242,12 +273,13 @@ mdbr_retcode_t mdbr_shkeys_list_add(mdbr_shkey *sh) {
 
 PG_FUNCTION_INFO_V1(create_sharding_key);
 // TODO:: map shkey name into oid and raise error on shkey creation when shkey name in already usd
-MDB_ROUTER_API Datum create_sharding_key(PG_FUNCTION_ARGS) {
+MDB_ROUTER_API Datum create_sharding_key(PG_FUNCTION_ARGS)
+{
 	// as this func is not called in the fdw context
 	// -----------------------------------------------------------------
-        mdbr_init();
-	
-        char *name = text_to_cstring(PG_GETARG_TEXT_PP(0));
+	mdbr_init();
+
+	char *name = text_to_cstring(PG_GETARG_TEXT_PP(0));
 #ifdef SHKEY_USE_ARRAY_TYPE
 	// not working for now
 	ArrayType *shkey_args = PG_GETARG_ARRAYTYPE_P(1);
@@ -349,8 +381,9 @@ MDB_ROUTER_API Datum create_sharding_key(PG_FUNCTION_ARGS) {
 
 PG_FUNCTION_INFO_V1(show_shkey);
 
-MDB_ROUTER_API Datum show_shkey(PG_FUNCTION_ARGS) {
-        mdbr_init();
+MDB_ROUTER_API Datum show_shkey(PG_FUNCTION_ARGS)
+{
+	mdbr_init();
 
 	char *shkey_name = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
@@ -376,8 +409,9 @@ int assign_key_range_2_shard_impl(mdbr_shard *sh, mdbr_key_range *kr)
 }
 
 PG_FUNCTION_INFO_V1(assign_key_range_2_shard);
-MDB_ROUTER_API Datum assign_key_range_2_shard(PG_FUNCTION_ARGS) {
-        mdbr_init();
+MDB_ROUTER_API Datum assign_key_range_2_shard(PG_FUNCTION_ARGS)
+{
+	mdbr_init();
 
 	/**/
 	char *shard_name = text_to_cstring(PG_GETARG_TEXT_PP(0));

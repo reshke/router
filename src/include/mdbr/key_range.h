@@ -31,7 +31,7 @@ typedef struct {
 	mdbr_oid_t shard_oid;
 } mdbr_key_range;
 
-#define MAX_KEYRANGES 32
+#define MAX_KEYRANGES 64
 
 typedef struct {
 	size_t sz;

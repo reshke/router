@@ -7,7 +7,7 @@
 static mdbr_ltables_list *l = NULL;
 #define MDBR_LTABLE_NAMESPACE "mdbr local table list namespace"
 
-static void mdbr_ltables_init()
+void mdbr_ltables_init()
 {
 	elog(DEBUG2, "initializing ltables in shmem");
 	bool found;
@@ -19,7 +19,8 @@ static void mdbr_ltables_init()
 	}
 }
 
-bool is_local_table(char *n) {
+bool is_local_table(char *n)
+{
 	for (size_t i = 0; i < l->sz; ++i) {
 		if (strcmp(n, l->ltables[i]) == 0) {
 			return true;

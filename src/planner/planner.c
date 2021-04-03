@@ -602,7 +602,7 @@ void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 {
 	node->es = estate;
 	MemoryContext oldcontext = CurrentMemoryContext;
-       // estate->es_processed = 1;
+	// estate->es_processed = 1;
 
 	/*  
                  *      isTopLevel: passed down from ProcessUtility to determine whether we are
@@ -1583,7 +1583,7 @@ static PlannedStmt *shard_query_pushdown_planner(Query *parse,
 	PlannedStmt *result =
 		pplanner(parse, query_string, cursorOptions, boundParams);
 
-        switch (result->commandType) {
+	switch (result->commandType) {
 	case CMD_INSERT:
 	case CMD_UPDATE:
 	case CMD_DELETE: {
