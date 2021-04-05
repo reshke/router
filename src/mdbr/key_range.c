@@ -19,6 +19,11 @@ static mdbr_kr_list *shkey_krs_list = NULL;
 
 MDBR_INIT_F mdbr_retcode_t mdbr_kr_init()
 {
+#if 0
+        RequestAddinShmemSpace(sizeof(mdbr_kr_list));
+        RequestAddinShmemSpace(sizeof(mdbr_key_range) * MAX_KEYRANGES);
+#endif
+
 	bool found;
 	shkey_krs_list = ShmemInitStruct(MDBR_KEYS_L_NAMESPACE,
 					 sizeof(mdbr_kr_list), &found);
