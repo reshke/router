@@ -572,7 +572,7 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 		if (!commit_remote_xact(conn)) {
 			elog(ERROR, "commit shard transaction failed");
 		}
-		PQfinish(conn);
+		//PQfinish(conn);
 	} break;
 	case XACT_EVENT_ABORT:
 	case XACT_EVENT_PARALLEL_ABORT: {
@@ -591,9 +591,49 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 		if (!rollback_remote_xact(conn)) {
 			elog(ERROR, "close shard transaction faild");
 		}
-		PQfinish(conn);
+		//PQfinish(conn);
 	} break;
 	}
+
+	return;
+}
+
+static HTAB * router_conn_cache = NULL;
+#define ROUTER_CONN_CACHE_NAME "ROUTER_CONN_CACHE_HTAB"
+
+#define MAX_CACHED_CONN 5
+typedef struct {
+	mdbr_oid_t oid;
+} router_conn_key;
+
+typedef struct {
+	router_conn_key key;
+	PGconn * shard_conn;
+} router_conn_cache_entry;
+
+void _router_get_connection(mdbr_oid_t shoid, PGconn **dst)
+{
+	bool h_found;
+	router_conn_cache_entry *e;
+	router_conn_key key;
+	key.oid = shoid;
+	e = hash_search(router_conn_cache, (void *)&key, HASH_FIND, &h_found);
+
+	if (h_found) {
+		elog(WARNING, "conn found in cahce !!!");
+		(*dst) = e->shard_conn;
+		return;
+	} else {
+		elog(WARNING, "conn not found in cahce !!!");
+	}
+
+	mdbr_get_shard_connection_dst(shoid, dst);
+
+#if 1
+	elog(WARNING, "store conn in cahce !!!");
+	e = hash_search(router_conn_cache, (void *)&key, HASH_ENTER, &h_found);
+	e->shard_conn = *dst;
+#endif
 
 	return;
 }
@@ -654,8 +694,7 @@ void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 
 	if (global->parsed_shard == UNROUTED) {
 		global->parsed_shard = node->parsed_shard;
-		mdbr_get_shard_connection_dst(node->parsed_shard,
-					      &global->conn);
+		_router_get_connection(node->parsed_shard, &global->conn);
 	}
 	if (IsInTransactionBlock(false) && !global->in_transaction) {
 		// begin was called, start transaction
@@ -890,7 +929,7 @@ static void fetch_scan_tuples_buff(mdbr_scan_state_t *node)
 
 	/* close the connection to the database and cleanup */
 	if (!global->in_transaction) {
-		PQfinish(conn);
+		//PQfinish(conn);
 	}
 	//	MemoryContextSwitchTo(oldcontext);
 
@@ -1597,8 +1636,20 @@ static PlannedStmt *shard_query_pushdown_planner(Query *parse,
 void mdbrExecutorRun(QueryDesc *queryDesc, ScanDirection direction,
 		     uint64 count, bool execute_once);
 
+#define USE_CONN_CACHE
+
 void mdbr_planner_init()
 {
+#ifdef USE_CONN_CACHE
+	HASHCTL ctl;
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(router_conn_key);
+	ctl.entrysize = sizeof(router_conn_cache_entry);
+
+	router_conn_cache = hash_create(ROUTER_CONN_CACHE_NAME, MAX_SHKEY_L_SZ,
+					&ctl, HASH_ELEM);
+
+#endif
 	ExecutorRun_hook = ExecutorRun_hook;
 	planner_hook = shard_query_pushdown_planner;
 
