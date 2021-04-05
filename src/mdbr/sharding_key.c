@@ -17,17 +17,17 @@ static HTAB *shkey_oid_hashtable = NULL;
 #define MDBR_SHKEYS_HTAB_OIDS "MDBR_SHKEYS_HTAB_OIDS"
 
 typedef struct {
-        mdbr_oid_t oid;
+	mdbr_oid_t oid;
 } mdbr_shkey_key;
 
 typedef struct {
-        mdbr_shkey_key key;
+	mdbr_shkey_key key;
 	mdbr_shkey *shkey_ptr;
 } mdbr_shkey_cache_entry;
 
 MDBR_INIT_F mdbr_retcode_t mdbr_shkeys_init()
 {
-        elog(DEBUG2, "initializing shkeys in shmem");
+	elog(DEBUG2, "initializing shkeys in shmem");
 #if 0
         RequestAddinShmemSpace(sizeof(mdbr_shkeys_list));
 #endif
@@ -43,14 +43,14 @@ MDBR_INIT_F mdbr_retcode_t mdbr_shkeys_init()
         RequestAddinShmemSpace(sizeof(mdbr_shkey) * MAX_SHKEY_L_SZ);
 #endif
 
-#if 0
-        HASHCTL ctl;
+#if 1
+	HASHCTL ctl;
 	memset(&ctl, 0, sizeof(ctl));
 	ctl.keysize = sizeof(mdbr_shkey_key);
 	ctl.entrysize = sizeof(mdbr_shkey_cache_entry);
 
-	shkey_oid_hashtable =
-		hash_create(MDBR_SHKEYS_HTAB_OIDS, MAX_SHKEY_L_SZ, &ctl, HASH_ELEM);
+	shkey_oid_hashtable = hash_create(MDBR_SHKEYS_HTAB_OIDS, MAX_SHKEY_L_SZ,
+					  &ctl, HASH_ELEM);
 #endif
 
 #if 0
@@ -88,18 +88,20 @@ static mdbr_retcode_t mdbr_shkey_store(mdbr_shkey **shk, mdbr_oid_t *oid)
 
 mdbr_shkey *mdbr_shkey_getbyoid(mdbr_oid_t oid)
 {
-#if 0
+#if 1
 	bool h_found;
-        mdbr_shkey_cache_entry * e;
-        mdbr_shkey_key key;
-        key.oid = oid;
-        e = hash_search(shkey_oid_hashtable, (void *)&key, HASH_FIND, &h_found);
+	mdbr_shkey_cache_entry *e;
+	mdbr_shkey_key key;
+	key.oid = oid;
+	e = hash_search(shkey_oid_hashtable, (void *)&key, HASH_FIND, &h_found);
 
 	if (h_found) {
 		elog(WARNING, "found in cahce !!!");
 		return e->shkey_ptr;
+	} else {
+		elog(WARNING, "not found in cahce !!!");
 	}
-#endif 
+#endif
 
 	//                prefix                  + max_oid_len + NULL
 	char prefix[sizeof(MDBR_SHKEY_NAMESPACE) + MAX_OID_LEN];
@@ -114,11 +116,12 @@ mdbr_shkey *mdbr_shkey_getbyoid(mdbr_oid_t oid)
 		elog(ERROR, "sharding with oid %d not found", oid);
 		return NULL;
 	}
-#if 0
+#if 1
 	elog(WARNING, "store in cahce !!!");
-	e = hash_search(shkey_oid_hashtable, (void *)&key, HASH_ENTER, &h_found);
-        e->shkey_ptr = shk;
-#endif 
+	e = hash_search(shkey_oid_hashtable, (void *)&key, HASH_ENTER,
+			&h_found);
+	e->shkey_ptr = shk;
+#endif
 	return shk;
 }
 

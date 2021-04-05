@@ -17,12 +17,27 @@
 
 static mdbr_kr_list *shkey_krs_list = NULL;
 
+static HTAB *kr_hashtable = NULL;
+#define MDBR_KR_HTAB "MDBR_KR_HTAB"
+
+typedef struct {
+	mdbr_oid_t oid;
+} mdbr_kr_key;
+
+typedef struct {
+	mdbr_kr_key key;
+	mdbr_key_range *kr_ptr;
+} mdbr_kr_cache_entry;
+
 MDBR_INIT_F mdbr_retcode_t mdbr_kr_init()
 {
-#if 0
-        RequestAddinShmemSpace(sizeof(mdbr_kr_list));
-        RequestAddinShmemSpace(sizeof(mdbr_key_range) * MAX_KEYRANGES);
-#endif
+	HASHCTL ctl;
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(mdbr_kr_key);
+	ctl.entrysize = sizeof(mdbr_kr_cache_entry);
+
+	kr_hashtable =
+		hash_create(MDBR_KR_HTAB, MAX_KEYRANGES, &ctl, HASH_ELEM);
 
 	bool found;
 	shkey_krs_list = ShmemInitStruct(MDBR_KEYS_L_NAMESPACE,
@@ -33,6 +48,20 @@ MDBR_INIT_F mdbr_retcode_t mdbr_kr_init()
 
 mdbr_key_range *mdbr_key_range_get_from_oid(mdbr_oid_t oid)
 {
+#if 1
+	bool h_found;
+	mdbr_kr_cache_entry *e;
+	mdbr_kr_key key;
+	key.oid = oid;
+	e = hash_search(kr_hashtable, (void *)&key, HASH_FIND, &h_found);
+
+	if (h_found) {
+		elog(WARNING, "found in cahce !!!");
+		return e->kr_ptr;
+	} else {
+		elog(WARNING, "not found in cahce !!!");
+	}
+#endif
 	//                prefix               + max_oid_len + NULL
 	char prefix[sizeof(MDBR_KR_NAMESPACE) + MAX_OID_LEN];
 	sprintf(prefix, "%s-%d", MDBR_KR_NAMESPACE, oid);
@@ -45,6 +74,12 @@ mdbr_key_range *mdbr_key_range_get_from_oid(mdbr_oid_t oid)
 		// TODO: set errno properly
 		return NULL;
 	}
+
+#if 1
+	elog(WARNING, "store in cahce !!!");
+	e = hash_search(kr_hashtable, (void *)&key, HASH_ENTER, &h_found);
+	e->kr_ptr = kr;
+#endif
 
 	return kr;
 }
