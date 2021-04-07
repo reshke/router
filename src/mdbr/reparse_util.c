@@ -202,10 +202,14 @@ static void mdbr_reparse_col(Var *node, List *rtbls, char **dst)
 #endif
 }
 
+#define FLEX_SHKEY_OPARATOR 1
+
 static void mdbr_reparse_op(OpExpr *node, List *rtbls, mdbr_search_entry **sel)
 {
 	char *opname;
 
+	mdbr_restrict_info *ri = palloc(sizeof(mdbr_restrict_info));
+	mdbr_restrict_info_init(ri);
 	HeapTuple tuple;
 	Form_pg_operator form;
 
@@ -215,13 +219,15 @@ static void mdbr_reparse_op(OpExpr *node, List *rtbls, mdbr_search_entry **sel)
 		elog(ERROR, "cache lookup failed for operator %u", node->opno);
 	form = (Form_pg_operator)GETSTRUCT(tuple);
 
-	mdbr_restrict_info *ri = palloc(sizeof(mdbr_restrict_info));
-	mdbr_restrict_info_init(ri);
-
+#if FLEX_SHKEY_OPARATOR
 	/* opname is not a SQL identifier, so we should not quote it. */
 	opname = NameStr(form->oprname);
 	mdbr_reparse_opr(opname, &ri->op);
 	elog(DEBUG2, "reparsing opname %s result %d", opname, ri->op);
+	ReleaseSysCache(tuple);
+#else
+	ri->op = eq_op;
+#endif
 
 	// TODO: assert we have here exapltly 2 elems
 	/* reparse left & right child into dst */

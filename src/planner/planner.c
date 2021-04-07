@@ -347,6 +347,9 @@ typedef struct mdbr_scan_state {
 	EState *es;
 
 	int parsed_shard;
+
+	// -----------------------
+	MemoryContext queryResMemctx;
 } mdbr_scan_state_t;
 
 typedef struct mdbr_global {
@@ -598,7 +601,7 @@ static void mdbr_xact_callback(XactEvent event, void *arg)
 	return;
 }
 
-static HTAB * router_conn_cache = NULL;
+static HTAB *router_conn_cache = NULL;
 #define ROUTER_CONN_CACHE_NAME "ROUTER_CONN_CACHE_HTAB"
 
 #define MAX_CACHED_CONN 5
@@ -608,7 +611,7 @@ typedef struct {
 
 typedef struct {
 	router_conn_key key;
-	PGconn * shard_conn;
+	PGconn *shard_conn;
 } router_conn_cache_entry;
 
 void _router_get_connection(mdbr_oid_t shoid, PGconn **dst)
@@ -620,17 +623,17 @@ void _router_get_connection(mdbr_oid_t shoid, PGconn **dst)
 	e = hash_search(router_conn_cache, (void *)&key, HASH_FIND, &h_found);
 
 	if (h_found) {
-		elog(WARNING, "conn found in cahce !!!");
+		elog(DEBUG1, "conn found in cahce !!!");
 		(*dst) = e->shard_conn;
 		return;
 	} else {
-		elog(WARNING, "conn not found in cahce !!!");
+		elog(DEBUG1, "conn not found in cahce !!!");
 	}
 
 	mdbr_get_shard_connection_dst(shoid, dst);
 
 #if 1
-	elog(WARNING, "store conn in cahce !!!");
+	elog(DEBUG1, "store conn in cahce !!!");
 	e = hash_search(router_conn_cache, (void *)&key, HASH_ENTER, &h_found);
 	e->shard_conn = *dst;
 #endif
@@ -640,6 +643,16 @@ void _router_get_connection(mdbr_oid_t shoid, PGconn **dst)
 
 void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 {
+	Assert(node->queryResMemctx == NULL);
+
+	MemoryContext qres_ctx =
+		AllocSetContextCreate(CurrentMemoryContext,
+				      "remote shard query result tuples",
+				      ALLOCSET_DEFAULT_SIZES);
+
+	node->queryResMemctx = qres_ctx;
+
+	MemoryContext old_ctx = MemoryContextSwitchTo(qres_ctx);
 	node->es = estate;
 	MemoryContext oldcontext = CurrentMemoryContext;
 	// estate->es_processed = 1;
@@ -655,12 +668,11 @@ void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 	slot->constr = NULL;
 
 	memset(slot->attrs, 0, slot->natts * sizeof(FormData_pg_attribute));
-
 	get_tts_from_qry(node->parse, &slot);
+
 	node->csc.ss.ps.ps_ResultTupleDesc = slot;
 
 	node->once = false;
-
 	node->data_iter = node->numrows = 0;
 	node->tuples = NULL;
 	node->parsed_shard = UNROUTED;
@@ -668,10 +680,15 @@ void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 	// here we acsually do main part
 	mdbr_search_entry *se = mdbr_search_entry_init();
 
+	bool success = false;
+#if 1
 	mdbr_reparse_query(node->parse, &se);
 
-	bool success;
 	mdbr_oid_t shoid = mdbr_route_by_se(list_make1(se), &success);
+#else
+	success = true;
+	mdbr_oid_t shoid = 1;
+#endif
 	if (!success) {
 		elog(ERROR, "failed to reparse search conditions");
 	} else {
@@ -702,6 +719,7 @@ void beginmdbrscan(mdbr_scan_state_t *node, EState *estate, int eflags)
 		global->in_transaction = true;
 	}
 
+	MemoryContextSwitchTo(old_ctx);
 	return;
 }
 
@@ -750,7 +768,7 @@ static HeapTuple make_tuple_from_result_row(PGresult *res, int row,
 					    MemoryContext temp_context)
 {
 	AttInMetadata *attinmeta = TupleDescGetAttInMetadata(tupDesc);
-	HeapTuple tuple;
+	HeapTuple tuple = NULL;
 	Datum *values;
 	bool *nulls;
 	MemoryContext oldcontext;
@@ -828,6 +846,7 @@ static HeapTuple make_tuple_from_result_row(PGresult *res, int row,
 	 */
 	MemoryContextSwitchTo(oldcontext);
 
+#if 1
 	tuple = heap_form_tuple(tupDesc, values, nulls);
 
 	/*
@@ -841,6 +860,7 @@ static HeapTuple make_tuple_from_result_row(PGresult *res, int row,
 	HeapTupleHeaderSetXmax(tuple->t_data, InvalidTransactionId);
 	HeapTupleHeaderSetXmin(tuple->t_data, InvalidTransactionId);
 	HeapTupleHeaderSetCmin(tuple->t_data, InvalidTransactionId);
+#endif
 
 	/* Clean up */
 	MemoryContextReset(temp_context);
@@ -854,7 +874,6 @@ static void fetch_scan_tuples_buff(mdbr_scan_state_t *node)
 	RangeTblEntry *rte =
 		(RangeTblEntry *)parse->rtable->elements[0].ptr_value;
 	PGresult *volatile res = NULL;
-	MemoryContext oldcontext;
 
 	/*
 	 * We'll store the tuples in the batch_cxt.  First, flush the previous
@@ -862,8 +881,6 @@ static void fetch_scan_tuples_buff(mdbr_scan_state_t *node)
 	 */
 	PGconn *conn = global->conn;
 	char *qry = node->qry;
-	//MemoryContextReset(fsstate->batch_cxt);
-	//oldcontext = MemoryContextSwitchTo(fsstate->batch_cxt);
 
 	/* PGresult must be released before leaving this function. */
 	PG_TRY();
@@ -895,29 +912,37 @@ static void fetch_scan_tuples_buff(mdbr_scan_state_t *node)
 		/* Convert the data into HeapTuples */
 		numrows = PQntuples(res);
 		node->numrows = numrows;
+		node->tuples = NULL;
 
+#ifndef DEBUG_INGORE_RES
 		if (numrows) {
 			node->tuples = (HeapTuple *)palloc0(numrows *
 							    sizeof(HeapTuple));
 
-			MemoryContext temp_cxt = AllocSetContextCreate(
+			/************************************************************
+                        * Allocate the remote query execution res 
+                        *
+                        * tuples of query res all live in queryResMemctx.
+                        ************************************************************/
+
+			MemoryContext temp_ctx = AllocSetContextCreate(
 				CurrentMemoryContext,
-				"postgres_fdw temporary data",
-				ALLOCSET_SMALL_SIZES);
+				"tmp context for tuples decoding",
+				ALLOCSET_DEFAULT_SIZES);
 
 			List *retrieved_attrs = parse->targetList;
-
 			for (i = 0; i < numrows; i++) {
 				Assert(IsA(node->csc.ss.ps.plan, CustomScan));
 
 				node->tuples[i] = make_tuple_from_result_row(
 					res, i, get_qry_td(node),
-					retrieved_attrs, temp_cxt);
+					retrieved_attrs, temp_ctx);
 			}
-
-		} else {
-			node->tuples = NULL;
 		}
+#else
+		node->numrows = 0;
+#endif
+
 		/* Must be EOF if we didn't get as many tuples as we asked for. */
 	}
 	PG_FINALLY();
@@ -931,7 +956,6 @@ static void fetch_scan_tuples_buff(mdbr_scan_state_t *node)
 	if (!global->in_transaction) {
 		//PQfinish(conn);
 	}
-	//	MemoryContextSwitchTo(oldcontext);
 
 	return;
 }
@@ -940,6 +964,9 @@ static void fetch_scan_tuples_buff(mdbr_scan_state_t *node)
 TupleTableSlot *mdbr_exec(mdbr_scan_state_t *node)
 {
 #if 1
+	Assert(node->queryResMemctx);
+	MemoryContext old_ctx = MemoryContextSwitchTo(node->queryResMemctx);
+
 	List *rtel = node->parse->rtable;
 
 	TupleDesc tupDesc = get_qry_td(node);
@@ -969,14 +996,20 @@ TupleTableSlot *mdbr_exec(mdbr_scan_state_t *node)
 
 	ExecStoreHeapTuple(node->tuples[node->data_iter++], slot, true);
 
+	MemoryContextSwitchTo(old_ctx);
 	return slot;
 #else
 	return NULL;
 #endif
 }
 
-void mdbr_end_scan(CustomScanState *node)
+void mdbr_end_scan(mdbr_scan_state_t *node)
 {
+	if (node->queryResMemctx) {
+		elog(DEBUG1, "reseting qry memcxt");
+		MemoryContextReset(node->queryResMemctx);
+	}
+	node->queryResMemctx = NULL;
 }
 
 static CustomExecMethods mdbr_mt = {
@@ -1650,7 +1683,6 @@ void mdbr_planner_init()
 					&ctl, HASH_ELEM);
 
 #endif
-	ExecutorRun_hook = ExecutorRun_hook;
 	planner_hook = shard_query_pushdown_planner;
 
 	global = malloc(sizeof(mdbr_global_t));

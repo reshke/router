@@ -27,7 +27,8 @@ OBJS = \
 
 PGFILEDESC = "router - postgresql extention to route queries betwwen shards"
 
-PG_CPPFLAGS = -I$(libpq_srcdir) -I$(INCLUDE_DIR) -DMDB_ROUTER -fstack-protector -Wno-error
+ROUTER_CXX_FLAGS := 
+PG_CPPFLAGS = -I$(libpq_srcdir) -I$(INCLUDE_DIR) -DMDB_ROUTER -fstack-protector -Wno-error $(ROUTER_CXX_FLAGS)
 SHLIB_LINK_INTERNAL = $(libpq)
 
 EXTENSION = router

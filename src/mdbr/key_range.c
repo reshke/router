@@ -56,10 +56,10 @@ mdbr_key_range *mdbr_key_range_get_from_oid(mdbr_oid_t oid)
 	e = hash_search(kr_hashtable, (void *)&key, HASH_FIND, &h_found);
 
 	if (h_found) {
-		elog(WARNING, "found in cahce !!!");
+		elog(DEBUG1, "found in cahce !!!");
 		return e->kr_ptr;
 	} else {
-		elog(WARNING, "not found in cahce !!!");
+		elog(DEBUG1, "not found in cahce !!!");
 	}
 #endif
 	//                prefix               + max_oid_len + NULL
@@ -76,7 +76,7 @@ mdbr_key_range *mdbr_key_range_get_from_oid(mdbr_oid_t oid)
 	}
 
 #if 1
-	elog(WARNING, "store in cahce !!!");
+	elog(DEBUG1, "store in cahce !!!");
 	e = hash_search(kr_hashtable, (void *)&key, HASH_ENTER, &h_found);
 	e->kr_ptr = kr;
 #endif

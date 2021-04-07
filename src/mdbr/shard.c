@@ -94,17 +94,17 @@ void mdbr_get_shard_connection_dst(mdbr_oid_t oid, PGconn **dst)
 	elog(DEBUG2, "trying to acuire connection to shard (oid %d)", oid);
 
 	char **keywords =
-		(char **)malloc((sh->sz /* + NULL */ + 1) * sizeof(char *));
+		(char **)palloc0((sh->sz /* + NULL */ + 1) * sizeof(char *));
 	char **values =
-		(char **)malloc((sh->sz /* + NULL */ + 1) * sizeof(char *));
+		(char **)palloc0((sh->sz /* + NULL */ + 1) * sizeof(char *));
 
 	for (size_t i = 0; i < sh->sz; ++i) {
 		keywords[i] =
-			malloc((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
+			palloc0((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
 		strcpy(keywords[i], sh->keywords[i]);
 
 		values[i] =
-			malloc((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
+			palloc0((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
 		strcpy(values[i], sh->values[i]);
 	}
 
@@ -135,17 +135,17 @@ PGconn *mdbr_get_shard_connection(mdbr_oid_t oid)
 	elog(DEBUG2, "trying to acuire connection to shard (oid %d)", oid);
 
 	char **keywords =
-		(char **)malloc((sh->sz /* + NULL */ + 1) * sizeof(char *));
+		(char **)palloc0((sh->sz /* + NULL */ + 1) * sizeof(char *));
 	char **values =
-		(char **)malloc((sh->sz /* + NULL */ + 1) * sizeof(char *));
+		(char **)palloc0((sh->sz /* + NULL */ + 1) * sizeof(char *));
 
 	for (size_t i = 0; i < sh->sz; ++i) {
 		keywords[i] =
-			malloc((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
+			palloc0((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
 		strcpy(keywords[i], sh->keywords[i]);
 
 		values[i] =
-			malloc((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
+			palloc0((MAXCSTRINGSZ /* + NULL */ + 1) * sizeof(char));
 		strcpy(values[i], sh->values[i]);
 	}
 

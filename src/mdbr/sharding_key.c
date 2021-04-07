@@ -96,10 +96,10 @@ mdbr_shkey *mdbr_shkey_getbyoid(mdbr_oid_t oid)
 	e = hash_search(shkey_oid_hashtable, (void *)&key, HASH_FIND, &h_found);
 
 	if (h_found) {
-		elog(WARNING, "found in cahce !!!");
+		elog(DEBUG1, "found in cahce !!!");
 		return e->shkey_ptr;
 	} else {
-		elog(WARNING, "not found in cahce !!!");
+		elog(DEBUG1, "not found in cahce !!!");
 	}
 #endif
 
@@ -117,7 +117,7 @@ mdbr_shkey *mdbr_shkey_getbyoid(mdbr_oid_t oid)
 		return NULL;
 	}
 #if 1
-	elog(WARNING, "store in cahce !!!");
+	elog(DEBUG1, "store in cahce !!!");
 	e = hash_search(shkey_oid_hashtable, (void *)&key, HASH_ENTER,
 			&h_found);
 	e->shkey_ptr = shk;
